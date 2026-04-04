@@ -11,7 +11,9 @@ export default function Hero({ lastUpdated }) {
   const ctaRef = useRef(null);
   const metaRef = useRef(null);
 
+  /* Force PHT (Asia/Manila) regardless of user's system timezone */
   const formattedTime = lastUpdated.toLocaleTimeString("en-PH", {
+    timeZone: "Asia/Manila",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -32,9 +34,14 @@ export default function Hero({ lastUpdated }) {
   }, []);
 
   return (
-    <section ref={heroRef} id="hero-section" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-black">
+    <section
+      ref={heroRef}
+      id="hero-section"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      aria-label="BookPulse hero — real-time Filipino book trends"
+    >
+      {/* Background grid + gradient */}
+      <div className="absolute inset-0 bg-black" aria-hidden="true">
         <div className="absolute inset-0 opacity-15" style={{
           backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(230,59,46,0.05) 59px, rgba(230,59,46,0.05) 60px),
                             repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(230,59,46,0.05) 59px, rgba(230,59,46,0.05) 60px)`,
@@ -51,10 +58,11 @@ export default function Hero({ lastUpdated }) {
           </h1>
         </div>
         <div className="overflow-hidden mt-2">
-          <h1 ref={line2Ref} className="font-heading font-bold text-signal tracking-tighter leading-none"
-              style={{ fontSize: "clamp(4rem, 12vw, 11rem)", opacity: 0 }}>
+          <span ref={line2Ref} className="block font-heading font-bold text-signal tracking-tighter leading-none"
+              style={{ fontSize: "clamp(4rem, 12vw, 11rem)", opacity: 0 }}
+              aria-label="Pulse">
             Pulse
-          </h1>
+          </span>
         </div>
 
         {/* Subtitle — generous gap */}
@@ -67,32 +75,36 @@ export default function Hero({ lastUpdated }) {
         {/* Platform list */}
         <p ref={platformsRef}
            className="font-data text-xs text-white/25 mt-8 tracking-[0.25em] uppercase"
-           style={{ opacity: 0 }}>
+           style={{ opacity: 0 }}
+           aria-label="Data sources: BookTokPH, r/phbookclub, Goodreads">
           BookTokPH · r/phbookclub · Goodreads
         </p>
 
-        {/* CTA — mt-12 as specified, px-10 py-4 */}
+        {/* CTA — mt-12, min 44px touch target */}
         <div ref={ctaRef} className="mt-12" style={{ opacity: 0 }}>
           <a href="#trending-board" id="hero-cta"
              className="inline-flex items-center justify-center gap-3 bg-signal hover:bg-signal-dark text-white font-heading font-bold text-sm tracking-widest uppercase rounded-full border-2 border-signal hover:border-signal-dark transition-all duration-300 no-underline shadow-[0_0_48px_rgba(230,59,46,0.15)] hover:shadow-[0_0_64px_rgba(230,59,46,0.3)]"
-             style={{ padding: "1rem 2.5rem" }}>
+             style={{ padding: "1rem 2.5rem", minHeight: "44px" }}
+             aria-label="Scroll to trending books section">
             Explore Trending Books
-            <ArrowDown size={18} className="animate-bounce" />
+            <ArrowDown size={18} className="animate-bounce" aria-hidden="true" />
           </a>
         </div>
 
-        {/* Meta */}
-        <div ref={metaRef} className="mt-10 flex items-center justify-center gap-4 text-white/20 font-data text-[11px] tracking-wide" style={{ opacity: 0 }}>
-          <Clock size={12} />
+        {/* Meta — PHT-locked timestamp */}
+        <div ref={metaRef} className="mt-10 flex items-center justify-center gap-4 text-white/20 font-data text-[11px] tracking-wide"
+             style={{ opacity: 0 }}
+             aria-label={`Last synced at ${formattedTime} Philippine Standard Time`}>
+          <Clock size={12} aria-hidden="true" />
           <span>Last synced: {formattedTime}</span>
-          <span className="text-white/10">·</span>
+          <span className="text-white/10" aria-hidden="true">·</span>
           <span>Auto-refresh: 60s</span>
-          <span className="text-white/10">·</span>
+          <span className="text-white/10" aria-hidden="true">·</span>
           <span>3 platforms</span>
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent" aria-hidden="true" />
     </section>
   );
 }

@@ -6,7 +6,7 @@ export default function Footer() {
   };
 
   return (
-    <footer id="footer" className="bg-black border-t border-white/5 py-16 md:py-20">
+    <footer id="footer" className="bg-black border-t border-white/5 py-16 md:py-20" role="contentinfo">
       <div className="container-bp">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-10 md:gap-12">
           {/* Brand */}
@@ -28,10 +28,10 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Links */}
+          {/* Links + Back to top */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-8 md:gap-12">
-            <div className="flex flex-col gap-3">
-              <span className="font-data text-[10px] text-white/15 tracking-widest uppercase">
+            <nav aria-label="Data source links">
+              <span className="font-data text-[10px] text-white/15 tracking-widest uppercase block mb-3">
                 Data Sources
               </span>
               <div className="flex gap-5">
@@ -45,19 +45,21 @@ export default function Footer() {
                   Goodreads
                 </span>
               </div>
-            </div>
+            </nav>
 
+            {/* Back to top — 44px min touch target */}
             <button
               onClick={scrollToTop}
               className="w-11 h-11 border-2 border-white/10 hover:border-signal rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-signal hover:scale-105 cursor-pointer bg-transparent"
-              aria-label="Scroll to top"
+              style={{ minWidth: "44px", minHeight: "44px" }}
+              aria-label="Scroll back to top of page"
             >
-              <ArrowUp size={16} className="text-white" />
+              <ArrowUp size={16} className="text-white" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Bottom Bar — more space above */}
+        {/* Bottom Bar */}
         <div className="mt-14 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-data text-[10px] text-white/12">
             © 2026 BOOKPULSE. BUILT FOR FILIPINO READERS.

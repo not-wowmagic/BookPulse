@@ -36,19 +36,20 @@ export default function BookCover({ cover, title, author, size = 48 }) {
   // Fallback placeholder
   const Placeholder = (
     <div
-      className="flex-shrink-0 rounded-lg flex items-center justify-center"
+      className="flex-shrink-0 rounded-lg flex items-center justify-center p-2 text-center border border-white/5 opacity-95 transition-opacity"
       style={{
         width: w,
         height: h,
         minWidth: w,
-        background: "linear-gradient(145deg, #1a1a1a 0%, #E63B2E 100%)",
+        background: "linear-gradient(145deg, #1a1a1a 0%, #2a0b08 100%)",
+        boxShadow: "inset 0 0 20px rgba(0,0,0,0.8)"
       }}
     >
       <span
-        className="font-heading font-bold text-white/90 tracking-wider"
-        style={{ fontSize: Math.max(9, size * 0.22) }}
+        className="font-drama text-[#E8E4DD] leading-[1.15] text-balance drop-shadow-lg"
+        style={{ fontSize: Math.max(10, size * 0.16) }}
       >
-        {initials}
+        {title}
       </span>
     </div>
   );
