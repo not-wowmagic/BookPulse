@@ -42,9 +42,16 @@ const PLATFORM_CONFIG = {
 /* Sanitize text to prevent XSS from any future external data source */
 function sanitize(str) {
   if (typeof str !== "string") return "";
-  return str.replace(/[<>"'&]/g, (ch) => ({
-    "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "&": "&amp;",
-  }[ch]));
+  const withoutControls = [...str]
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code > 31 && code !== 127;
+    })
+    .join("");
+
+  return withoutControls
+    .replace(/[<>]/g, "")
+    .trim();
 }
 
 /* ══════════════════════════════════════════════════════

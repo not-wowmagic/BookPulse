@@ -9,14 +9,6 @@ export default function BookCover({ cover, title, author, size = 48 }) {
   const [showFallback, setShowFallback] = useState(!cover);
   const imgRef = useRef(null);
 
-  const initials = title
-    .split(" ")
-    .filter((w) => w.length > 1 && w[0] !== "(")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-
   const w = size;
   const h = Math.round(size * 1.5);
 
@@ -33,21 +25,24 @@ export default function BookCover({ cover, title, author, size = 48 }) {
     setShowFallback(true);
   }, []);
 
+  const stamp = cover ? "STILL SEARCHING" : "MISSING DATA";
+  const isSignalTheme = ((title || "").length % 2) === 0;
+
   // Fallback placeholder
   const Placeholder = (
     <div
-      className="flex-shrink-0 rounded-lg flex items-center justify-center p-2 text-center border border-white/5 opacity-95 transition-opacity"
+      className={`neo-brutalist-poster ${isSignalTheme ? "neo-brutalist-poster--signal" : "neo-brutalist-poster--void"} flex-shrink-0 flex items-center justify-center p-2 text-center transition-opacity`}
       style={{
         width: w,
         height: h,
         minWidth: w,
-        background: "linear-gradient(145deg, #1a1a1a 0%, #2a0b08 100%)",
-        boxShadow: "inset 0 0 20px rgba(0,0,0,0.8)"
       }}
     >
+      <div className="neo-brutalist-noise" aria-hidden="true" />
+      <div className="neo-brutalist-stamp" aria-hidden="true">{stamp}</div>
       <span
-        className="font-drama text-[#E8E4DD] leading-[1.15] text-balance drop-shadow-lg"
-        style={{ fontSize: Math.max(10, size * 0.16) }}
+        className="neo-brutalist-title leading-[1.02] text-balance"
+        style={{ fontSize: Math.max(10, size * 0.2) }}
       >
         {title}
       </span>
