@@ -36,6 +36,7 @@ export async function finalizeIngestRun(supabase, runId, payload) {
       successful_sources: payload.successfulSources,
       failed_sources: payload.failedSources,
       error_count: payload.errorCount,
+      source_record_counts: payload.sourceRecordCounts || {},
       notes: payload.notes || null,
     })
     .eq("id", runId)
@@ -82,7 +83,7 @@ export async function insertSourceMentions(supabase, rows) {
   const response = await supabase
     .from("source_mentions")
     .upsert(rows, {
-      onConflict: "canonical_key,source,captured_at",
+      onConflict: "observation_key",
       ignoreDuplicates: false,
     })
     .select("id");

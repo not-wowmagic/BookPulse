@@ -1,181 +1,56 @@
-import { z } from "zod";
-
-const POSITIVE_INT = z
-  .coerce
-  .number()
-  .int()
-  .positive();
-
-const NON_NEGATIVE_INT = z
-  .coerce
-  .number()
-  .int()
-  .nonnegative();
-
-const PERCENT = z
-  .coerce
-  .number()
-  .min(0)
-  .max(100);
-
-const BOOLEAN_FROM_TEXT = z
-  .union([z.boolean(), z.string()])
-  .transform((value) => {
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(normalized)) {
-      return true;
-    }
-    if (["0", "false", "no", "off", ""].includes(normalized)) {
-      return false;
-    }
-
-    throw new Error(`Invalid boolean value: ${value}`);
-  });
-
-const BASE_SCHEMA = z.object({
-  BOOKPULSE_ENV: z.enum(["development", "staging", "production"]).default("development"),
-  BOOKPULSE_MODE: z.enum(["demo", "production"]).default("demo"),
-
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1).optional(),
-
-  REDIS_URL: z.string().url().optional(),
-  REDIS_REST_URL: z.string().url().optional(),
-  REDIS_REST_TOKEN: z.string().min(1).optional(),
-
-  CRON_SECRET: z.string().min(24),
-
-  OPEN_LIBRARY_BASE_URL: z.string().url().default("https://openlibrary.org"),
-  OPEN_LIBRARY_TIMEOUT_MS: POSITIVE_INT.default(3500),
-  OPENLIBRARY_MIN_CALL_INTERVAL_MS: POSITIVE_INT.default(1000),
-  SOURCE_TIMEOUT_MS: POSITIVE_INT.default(5000),
-  SOURCE_RETRY_ATTEMPTS: NON_NEGATIVE_INT.default(2),
-  AUTHOR_SIMILARITY_THRESHOLD: PERCENT.default(85),
-  METADATA_FAILURE_THRESHOLD: POSITIVE_INT.default(3),
-
-  GOOGLE_BOOKS_BASE_URL: z.string().url().default("https://www.googleapis.com/books/v1"),
-  GOOGLE_BOOKS_API_KEY: z.string().min(1).optional(),
-
-  FIRECRAWL_SEARCH_ENDPOINT: z.string().url().default("https://api.firecrawl.dev/v1/search"),
-  FIRECRAWL_SCRAPE_ENDPOINT: z.string().url().default("https://api.firecrawl.dev/v1/scrape"),
-  FIRECRAWL_API_KEY: z.string().min(1).optional(),
-
-  SWR_FRESH_SECONDS: POSITIVE_INT.default(21600),
-  SWR_STALE_SECONDS: POSITIVE_INT.default(259200),
-
-  LOCK_TTL_SECONDS: POSITIVE_INT.default(900),
-
-  INGEST_REQUIRED_SOURCES: z.string().default("tiktok,reddit,goodreads"),
-  PHT_TIMEZONE: z.string().default("Asia/Manila"),
-
-  ALLOW_DEMO_SOURCES: BOOLEAN_FROM_TEXT.default(false),
-
-  TIKTOK_TRENDS_ENDPOINT: z.string().url().optional(),
-  TIKTOK_API_TOKEN: z.string().min(1).optional(),
-
-  REDDIT_TRENDS_ENDPOINT: z.string().url().optional(),
-  REDDIT_API_TOKEN: z.string().min(1).optional(),
-
-  GOODREADS_TRENDS_ENDPOINT: z.string().url().optional(),
-  GOODREADS_API_TOKEN: z.string().min(1).optional(),
-
-  ADMIN_EDIT_TOKEN: z.string().min(24).optional(),
+const DEFAULTS = Object.freeze({
+  BOOKPULSE_ENV: "development", BOOKPULSE_MODE: "demo",
+  OPEN_LIBRARY_BASE_URL: "https://openlibrary.org", OPEN_LIBRARY_TIMEOUT_MS: 3500,
+  OPENLIBRARY_MIN_CALL_INTERVAL_MS: 1000, SOURCE_TIMEOUT_MS: 5000, SOURCE_RETRY_ATTEMPTS: 2,
+  AUTHOR_SIMILARITY_THRESHOLD: 85, METADATA_FAILURE_THRESHOLD: 3,
+  GOOGLE_BOOKS_BASE_URL: "https://www.googleapis.com/books/v1",
+  FIRECRAWL_SEARCH_ENDPOINT: "https://api.firecrawl.dev/v1/search",
+  FIRECRAWL_SCRAPE_ENDPOINT: "https://api.firecrawl.dev/v1/scrape",
+  SWR_FRESH_SECONDS: 21600, SWR_STALE_SECONDS: 259200, LOCK_TTL_SECONDS: 900,
+  INGEST_REQUIRED_SOURCES: "reddit", PHT_TIMEZONE: "Asia/Manila", ALLOW_DEMO_SOURCES: false,
+  REDDIT_COLLECTION_WINDOW_HOURS: 24, REDDIT_MAX_PAGES: 4,
 });
-
-const EDGE_SCHEMA = BASE_SCHEMA.superRefine((value, ctx) => {
-  if (!value.SUPABASE_ANON_KEY && !value.SUPABASE_SERVICE_ROLE_KEY) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY is required for edge reads",
-      path: ["SUPABASE_ANON_KEY"],
-    });
-  }
-});
-
-const NODE_SCHEMA = BASE_SCHEMA.superRefine((value, ctx) => {
-  if (value.BOOKPULSE_MODE === "production") {
-    const required = [
-      ["TIKTOK_TRENDS_ENDPOINT", value.TIKTOK_TRENDS_ENDPOINT],
-      ["TIKTOK_API_TOKEN", value.TIKTOK_API_TOKEN],
-      ["REDDIT_TRENDS_ENDPOINT", value.REDDIT_TRENDS_ENDPOINT],
-      ["REDDIT_API_TOKEN", value.REDDIT_API_TOKEN],
-      ["GOODREADS_TRENDS_ENDPOINT", value.GOODREADS_TRENDS_ENDPOINT],
-      ["GOODREADS_API_TOKEN", value.GOODREADS_API_TOKEN],
-    ];
-
-    required.forEach(([key, entry]) => {
-      if (!entry) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `${key} is required when BOOKPULSE_MODE=production`,
-          path: [key],
-        });
-      }
-    });
-
-    if (!value.ADMIN_EDIT_TOKEN) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "ADMIN_EDIT_TOKEN is required when BOOKPULSE_MODE=production",
-        path: ["ADMIN_EDIT_TOKEN"],
-      });
-    }
-  }
-
-  if (value.SWR_STALE_SECONDS <= value.SWR_FRESH_SECONDS) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "SWR_STALE_SECONDS must be greater than SWR_FRESH_SECONDS",
-      path: ["SWR_STALE_SECONDS"],
-    });
-  }
-});
-
+const URL_KEYS = ["SUPABASE_URL", "REDIS_URL", "REDIS_REST_URL", "OPEN_LIBRARY_BASE_URL", "GOOGLE_BOOKS_BASE_URL", "FIRECRAWL_SEARCH_ENDPOINT", "FIRECRAWL_SCRAPE_ENDPOINT", "TIKTOK_TRENDS_ENDPOINT", "REDDIT_TRENDS_ENDPOINT", "GOODREADS_TRENDS_ENDPOINT"];
+const POSITIVE_KEYS = ["OPEN_LIBRARY_TIMEOUT_MS", "OPENLIBRARY_MIN_CALL_INTERVAL_MS", "SOURCE_TIMEOUT_MS", "METADATA_FAILURE_THRESHOLD", "SWR_FRESH_SECONDS", "SWR_STALE_SECONDS", "LOCK_TTL_SECONDS", "REDDIT_COLLECTION_WINDOW_HOURS", "REDDIT_MAX_PAGES"];
+const OPTIONAL_KEYS = ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "REDIS_URL", "REDIS_REST_URL", "REDIS_REST_TOKEN", "CRON_SECRET", "GOOGLE_BOOKS_API_KEY", "FIRECRAWL_API_KEY", "TIKTOK_TRENDS_ENDPOINT", "TIKTOK_API_TOKEN", "REDDIT_TRENDS_ENDPOINT", "REDDIT_API_TOKEN", "REDDIT_USER_AGENT", "GOODREADS_TRENDS_ENDPOINT", "GOODREADS_API_TOKEN", "ADMIN_EDIT_TOKEN"];
 let cachedNodeEnv;
 let cachedEdgeEnv;
 
-function parseRequiredSources(rawList) {
-  return rawList
-    .split(",")
-    .map((source) => source.trim().toLowerCase())
-    .filter(Boolean);
+function fail(message) { throw new Error(`Environment validation failed: ${message}`); }
+function parseBoolean(value) {
+  if (typeof value === "boolean") return value;
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off", ""].includes(normalized)) return false;
+  fail(`ALLOW_DEMO_SOURCES: Invalid boolean value: ${value}`);
 }
-
-function parseSchema(schema, source) {
-  const parsed = schema.safeParse(source);
-  if (!parsed.success) {
-    const formatted = parsed.error.issues
-      .map((issue) => `${issue.path.join(".") || "env"}: ${issue.message}`)
-      .join("; ");
-    throw new Error(`Environment validation failed: ${formatted}`);
+function parseBase(source) {
+  const value = { ...DEFAULTS };
+  for (const key of Object.keys(DEFAULTS)) if (source[key] !== undefined && source[key] !== "") value[key] = source[key];
+  for (const key of OPTIONAL_KEYS) if (source[key] !== undefined && source[key] !== "") value[key] = source[key];
+  if (!source.SUPABASE_URL) fail("SUPABASE_URL: Required");
+  if (!["development", "staging", "production"].includes(value.BOOKPULSE_ENV)) fail("BOOKPULSE_ENV: Invalid value");
+  if (!["demo", "production"].includes(value.BOOKPULSE_MODE)) fail("BOOKPULSE_MODE: Invalid value");
+  value.ALLOW_DEMO_SOURCES = parseBoolean(value.ALLOW_DEMO_SOURCES);
+  value.SOURCE_RETRY_ATTEMPTS = Number(value.SOURCE_RETRY_ATTEMPTS);
+  if (!Number.isInteger(value.SOURCE_RETRY_ATTEMPTS) || value.SOURCE_RETRY_ATTEMPTS < 0) fail("SOURCE_RETRY_ATTEMPTS: Expected a non-negative integer");
+  for (const key of POSITIVE_KEYS) { value[key] = Number(value[key]); if (!Number.isInteger(value[key]) || value[key] <= 0) fail(`${key}: Expected a positive integer`); }
+  value.AUTHOR_SIMILARITY_THRESHOLD = Number(value.AUTHOR_SIMILARITY_THRESHOLD);
+  if (value.AUTHOR_SIMILARITY_THRESHOLD < 0 || value.AUTHOR_SIMILARITY_THRESHOLD > 100) fail("AUTHOR_SIMILARITY_THRESHOLD: Must be between 0 and 100");
+  for (const key of URL_KEYS) if (value[key]) { try { new URL(value[key]); } catch { fail(`${key}: Invalid URL`); } }
+  value.INGEST_REQUIRED_SOURCES_ARRAY = String(value.INGEST_REQUIRED_SOURCES).split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+  return value;
+}
+function validateNode(value) {
+  if (!value.SUPABASE_SERVICE_ROLE_KEY) fail("SUPABASE_SERVICE_ROLE_KEY: Required for node workers");
+  if (!value.CRON_SECRET || value.CRON_SECRET.length < 24) fail("CRON_SECRET: Required with at least 24 characters");
+  if (value.BOOKPULSE_MODE === "production") {
+    for (const key of ["REDDIT_TRENDS_ENDPOINT", "REDDIT_API_TOKEN", "ADMIN_EDIT_TOKEN"]) if (!value[key]) fail(`${key}: required when BOOKPULSE_MODE=production`);
   }
-
-  return {
-    ...parsed.data,
-    INGEST_REQUIRED_SOURCES_ARRAY: parseRequiredSources(parsed.data.INGEST_REQUIRED_SOURCES),
-  };
+  if (value.SWR_STALE_SECONDS <= value.SWR_FRESH_SECONDS) fail("SWR_STALE_SECONDS must be greater than SWR_FRESH_SECONDS");
+  return value;
 }
 
-export function getNodeEnv(source = process.env) {
-  if (!cachedNodeEnv) {
-    cachedNodeEnv = parseSchema(NODE_SCHEMA, source);
-  }
-  return cachedNodeEnv;
-}
-
-export function getEdgeEnv(source = process.env) {
-  if (!cachedEdgeEnv) {
-    cachedEdgeEnv = parseSchema(EDGE_SCHEMA, source);
-  }
-  return cachedEdgeEnv;
-}
-
-export function resetCachedEnvForTests() {
-  cachedNodeEnv = undefined;
-  cachedEdgeEnv = undefined;
-}
+export function getNodeEnv(source = process.env) { return cachedNodeEnv ||= validateNode(parseBase(source)); }
+export function getEdgeEnv(source = process.env) { const value = parseBase(source); if (!value.SUPABASE_ANON_KEY) fail("SUPABASE_ANON_KEY: required for edge reads"); return cachedEdgeEnv ||= value; }
+export function resetCachedEnvForTests() { cachedNodeEnv = undefined; cachedEdgeEnv = undefined; }

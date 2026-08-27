@@ -58,7 +58,7 @@ export default async function coverOverrideHandler(req, res) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const supabase = getSupabaseAdminClient(env);
+    const supabase = await getSupabaseAdminClient(env);
 
     if (req.method === "GET") {
       const canonicalKey = sanitizeFreeText(req.query?.canonicalKey || "", 220);

@@ -18,7 +18,7 @@ test("getNodeEnv validates and normalizes required values", () => {
 
   assert.equal(env.BOOKPULSE_MODE, "demo");
   assert.equal(env.ALLOW_DEMO_SOURCES, true);
-  assert.deepEqual(env.INGEST_REQUIRED_SOURCES_ARRAY, ["tiktok", "reddit", "goodreads"]);
+  assert.deepEqual(env.INGEST_REQUIRED_SOURCES_ARRAY, ["reddit"]);
 });
 
 test("getNodeEnv fails when stale window is not larger than fresh window", () => {

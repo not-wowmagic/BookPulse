@@ -1,78 +1,23 @@
-import { z } from "zod";
 import { toUtcIso } from "../core/time.js";
 
-const RAW_BOOK_SCHEMA = z.object({
-  title: z.string().min(1),
-  author: z.string().min(1).optional().default("Unknown"),
-  mentions: z.union([z.number(), z.string()]).optional(),
-  mentions24h: z.union([z.number(), z.string()]).optional(),
-  discussions: z.union([z.number(), z.string()]).optional(),
-  reviews: z.union([z.number(), z.string()]).optional(),
-  sourceUrl: z.string().url().optional(),
-  capturedAtUtc: z.string().datetime().optional(),
-});
-
-function stripControlCharacters(text) {
-  return [...text]
-    .map((character) => {
-      const code = character.charCodeAt(0);
-      if (code <= 31 || code === 127) {
-        return " ";
-      }
-      return character;
-    })
-    .join("");
-}
-
 function cleanText(value, maxLength) {
-  return stripControlCharacters(String(value ?? "").normalize("NFKC"))
-    .replace(/<[^>]*>/g, " ")
-    .replace(/[<>]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLength);
+  return [...String(value ?? "").normalize("NFKC")].map((character) => {
+    const code = character.charCodeAt(0); return code <= 31 || code === 127 ? " " : character;
+  }).join("").replace(/<[^>]*>/g, " ").replace(/[<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
-
-function parseMetric(record) {
-  const candidates = [record.mentions24h, record.mentions, record.discussions, record.reviews];
-  for (const candidate of candidates) {
-    const parsed = Number(candidate);
-    if (Number.isFinite(parsed)) {
-      return Math.max(0, Math.floor(parsed));
-    }
+function metric(record) {
+  for (const candidate of [record.mentions24h, record.mentions, record.discussions, record.reviews]) {
+    if (candidate === undefined) continue;
+    const parsed = Number(candidate); if (Number.isFinite(parsed)) return Math.max(0, Math.floor(parsed));
   }
   return 0;
 }
-
 export function sanitizeExternalBookRecord(rawRecord, sourceName) {
-  const parsed = RAW_BOOK_SCHEMA.parse(rawRecord);
-
-  const title = cleanText(parsed.title, 180);
-  const author = cleanText(parsed.author || "Unknown", 120) || "Unknown";
-  const source = cleanText(sourceName, 40).toLowerCase();
-
-  if (!title) {
-    throw new Error("Sanitized title is empty");
-  }
-
-  if (!source) {
-    throw new Error("Source name is required");
-  }
-
-  return Object.freeze({
-    title,
-    author,
-    source,
-    mentions24h: parseMetric(parsed),
-    sourceUrl: parsed.sourceUrl || null,
-    // Provider timestamps win. Otherwise use the cron's 15-minute observation
-    // window so replaying the same scheduled pull remains idempotent.
-    capturedAtUtc: parsed.capturedAtUtc
-      ? toUtcIso(parsed.capturedAtUtc)
-      : toUtcIso(new Date(Math.floor(Date.now() / 900_000) * 900_000)),
-  });
+  if (!rawRecord || typeof rawRecord !== "object" || typeof rawRecord.title !== "string" || !rawRecord.title) throw new TypeError("External book title is required");
+  const title = cleanText(rawRecord.title, 180); const author = cleanText(rawRecord.author || "Unknown", 120) || "Unknown"; const source = cleanText(sourceName, 40).toLowerCase();
+  if (!title) throw new Error("Sanitized title is empty");
+  if (!source) throw new Error("Source name is required");
+  if (rawRecord.sourceUrl) { try { new URL(rawRecord.sourceUrl); } catch { throw new TypeError("Invalid source URL"); } }
+  return Object.freeze({ title, author, source, mentions24h: metric(rawRecord), sourceUrl: rawRecord.sourceUrl || null, capturedAtUtc: rawRecord.capturedAtUtc ? toUtcIso(rawRecord.capturedAtUtc) : toUtcIso(new Date(Math.floor(Date.now() / 900_000) * 900_000)) });
 }
-
-export function sanitizeFreeText(rawText, maxLength = 400) {
-  return cleanText(rawText, maxLength);
-}
+export function sanitizeFreeText(rawText, maxLength = 400) { return cleanText(rawText, maxLength); }

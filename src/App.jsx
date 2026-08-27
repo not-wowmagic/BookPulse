@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import Hero from "./components/Hero";
 import Navbar from "./components/Navbar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -12,6 +12,10 @@ const Features = lazy(() => import("./components/Features"));
 const DataProtocol = lazy(() => import("./components/DataProtocol"));
 const EmailDigest = lazy(() => import("./components/EmailDigest"));
 const Footer = lazy(() => import("./components/Footer"));
+const BookDetail = lazy(() => import("./components/BookDetail"));
+const SourceHealth = lazy(() => import("./components/SourceHealth"));
+const Methodology = lazy(() => import("./components/Methodology"));
+const BreakoutRadar = lazy(() => import("./components/BreakoutRadar"));
 
 /* Minimal loading skeleton reused by Suspense boundaries */
 function SectionSkeleton() {
@@ -28,6 +32,7 @@ function SectionSkeleton() {
 }
 
 export default function App() {
+  const [selectedBook, setSelectedBook] = useState(null);
   const {
     booktokph, phbookclub, goodreads, fullFeed,
     lastUpdated, status, mode, error,
@@ -84,9 +89,16 @@ export default function App() {
               error={error}
               activeVibeFilter={activeVibeFilter}
               setActiveVibeFilter={setActiveVibeFilter}
+              onSelectBook={setSelectedBook}
             />
           </Suspense>
         </ErrorBoundary>
+
+        <ErrorBoundary><Suspense fallback={<SectionSkeleton />}><SourceHealth /></Suspense></ErrorBoundary>
+
+        <ErrorBoundary><Suspense fallback={<SectionSkeleton />}><BreakoutRadar onSelectBook={setSelectedBook} /></Suspense></ErrorBoundary>
+
+        <ErrorBoundary><Suspense fallback={<SectionSkeleton />}><Methodology /></Suspense></ErrorBoundary>
 
         {/* Features (existing) */}
         <ErrorBoundary>
@@ -113,6 +125,7 @@ export default function App() {
       <Suspense fallback={null}>
         <Footer />
       </Suspense>
+      {selectedBook && <Suspense fallback={null}><BookDetail book={selectedBook} onClose={() => setSelectedBook(null)} /></Suspense>}
     </>
   );
 }

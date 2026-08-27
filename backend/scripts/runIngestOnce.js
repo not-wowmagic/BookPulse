@@ -9,7 +9,7 @@ async function main() {
     env,
     logger: (message) => console.log(`[cache] ${message}`),
   });
-  const supabase = getSupabaseAdminClient(env);
+  const supabase = await getSupabaseAdminClient(env);
 
   const result = await runIngestion({
     env,
