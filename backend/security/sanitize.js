@@ -65,7 +65,11 @@ export function sanitizeExternalBookRecord(rawRecord, sourceName) {
     source,
     mentions24h: parseMetric(parsed),
     sourceUrl: parsed.sourceUrl || null,
-    capturedAtUtc: parsed.capturedAtUtc ? toUtcIso(parsed.capturedAtUtc) : toUtcIso(new Date()),
+    // Provider timestamps win. Otherwise use the cron's 15-minute observation
+    // window so replaying the same scheduled pull remains idempotent.
+    capturedAtUtc: parsed.capturedAtUtc
+      ? toUtcIso(parsed.capturedAtUtc)
+      : toUtcIso(new Date(Math.floor(Date.now() / 900_000) * 900_000)),
   });
 }
 

@@ -12,13 +12,13 @@ export default function Hero({ lastUpdated }) {
   const metaRef = useRef(null);
 
   /* Force PHT (Asia/Manila) regardless of user's system timezone */
-  const formattedTime = lastUpdated.toLocaleTimeString("en-PH", {
+  const formattedTime = lastUpdated ? lastUpdated.toLocaleTimeString("en-PH", {
     timeZone: "Asia/Manila",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: true,
-  });
+  }) : "Waiting for first snapshot";
 
   useEffect(() => {
     const ctx = gsap.context(() => {

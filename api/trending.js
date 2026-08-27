@@ -17,6 +17,32 @@ function json(body, status = 200) {
   });
 }
 
+export function buildTrendingResponse(readModel, env, now = new Date()) {
+  if (!readModel?.payload?.books?.length) {
+    return {
+      statusCode: 503,
+      body: { status: "warming", mode: env.BOOKPULSE_MODE, message: "No published snapshot is available yet" },
+    };
+  }
+
+  const payload = readModel.payload;
+  const ageSeconds = Math.max(0, (now.getTime() - new Date(payload.generatedAtUtc).getTime()) / 1000);
+  const status = ageSeconds > env.SWR_FRESH_SECONDS ? "stale" : "ok";
+  return {
+    statusCode: 200,
+    body: {
+      status,
+      mode: env.BOOKPULSE_MODE,
+      generatedAtUtc: payload.generatedAtUtc,
+      lastUpdatedPht: toPhtDisplay(payload.generatedAtUtc, env.PHT_TIMEZONE),
+      requiredSources: payload.requiredSources,
+      successfulSources: payload.successfulSources,
+      sourceFailures: payload.sourceFailures,
+      books: payload.books,
+    },
+  };
+}
+
 /**
  * Pre-Flight Checklist (verified in this handler)
  * 1) Read path is edge-safe and does not execute heavy enrichment logic.
@@ -29,25 +55,8 @@ export default async function trendingHandler() {
     const env = getEdgeEnv();
     const readModel = await getTrendingReadModel({ env });
 
-    if (!readModel?.payload?.books?.length) {
-      return json(
-        {
-          status: "warming",
-          message: "No published snapshot is available yet",
-        },
-        503
-      );
-    }
-
-    return json({
-      status: "ok",
-      generatedAtUtc: readModel.payload.generatedAtUtc,
-      lastUpdatedPht: toPhtDisplay(readModel.payload.generatedAtUtc, env.PHT_TIMEZONE),
-      requiredSources: readModel.payload.requiredSources,
-      successfulSources: readModel.payload.successfulSources,
-      sourceFailures: readModel.payload.sourceFailures,
-      books: readModel.payload.books,
-    });
+    const response = buildTrendingResponse(readModel, env);
+    return json(response.body, response.statusCode);
   } catch (error) {
     return json(
       {

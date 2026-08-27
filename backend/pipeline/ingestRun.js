@@ -7,6 +7,7 @@ import { fetchRedditSource } from "./sourceAdapters/reddit.js";
 import { fetchGoodreadsSource } from "./sourceAdapters/goodreads.js";
 import {
   finalizeIngestRun,
+  getPublishedTrendingReadModel,
   insertSourceMentions,
   publishTrendingReadModel,
   startIngestRun,
@@ -80,20 +81,45 @@ function mergeSourceRecords(successEntries) {
   }));
 }
 
-function buildMentionRows(runId, successEntries) {
-  const rows = [];
+export function buildMentionRows(runId, successEntries) {
+  const rows = new Map();
   for (const entry of successEntries) {
     for (const record of entry.records) {
-      rows.push({
+      const canonicalKey = canonicalBookKey(record.title, record.author);
+      const observationKey = `${canonicalKey}:${entry.sourceName}:${record.capturedAtUtc}`;
+      const existing = rows.get(observationKey);
+      rows.set(observationKey, {
         run_id: runId,
-        canonical_key: canonicalBookKey(record.title, record.author),
+        canonical_key: canonicalKey,
         source: entry.sourceName,
-        mentions_24h: record.mentions24h,
+        mentions_24h: (existing?.mentions_24h || 0) + record.mentions24h,
         captured_at: record.capturedAtUtc,
       });
     }
   }
-  return rows;
+  return [...rows.values()];
+}
+
+export function addSnapshotMovement(scoredBooks, previousPayload) {
+  const previousBooks = Array.isArray(previousPayload?.books) ? previousPayload.books : [];
+  const previousByKey = new Map(
+    previousBooks.map((book, index) => [book.canonicalKey, { ...book, rank: index + 1 }])
+  );
+
+  return scoredBooks.map((book, index) => {
+    const previous = previousByKey.get(book.canonicalKey);
+    const rank = index + 1;
+    const previousTrendScore = previous ? Number(previous.trendScore || 0) : null;
+    const previousRank = previous?.rank ?? null;
+    return {
+      ...book,
+      rank,
+      previousTrendScore,
+      scoreChange: previousTrendScore === null ? null : book.trendScore - previousTrendScore,
+      previousRank,
+      rankChange: previousRank === null ? null : previousRank - rank,
+    };
+  });
 }
 
 function normalizeBookForReadModel(book) {
@@ -110,6 +136,11 @@ function normalizeBookForReadModel(book) {
     sources: book.sources,
     lastSeenAtUtc: book.lastSeenAtUtc,
     metadata: book.metadata,
+    rank: book.rank,
+    previousTrendScore: book.previousTrendScore,
+    scoreChange: book.scoreChange,
+    previousRank: book.previousRank,
+    rankChange: book.rankChange,
   };
 }
 
@@ -191,9 +222,10 @@ export async function runIngestion({
       };
     });
 
-    const scored = scoreBooks(enriched, {
+    const previousReadModel = await getPublishedTrendingReadModel(supabase);
+    const scored = addSnapshotMovement(scoreBooks(enriched, {
       nowUtc: new Date(),
-    }).map((book) => ({
+    }), previousReadModel?.payload).map((book) => ({
       ...book,
       updatedAtUtc: utcNowIso(),
     }));

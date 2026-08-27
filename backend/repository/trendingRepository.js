@@ -82,12 +82,22 @@ export async function insertSourceMentions(supabase, rows) {
   const response = await supabase
     .from("source_mentions")
     .upsert(rows, {
-      onConflict: "run_id,canonical_key,source",
+      onConflict: "canonical_key,source,captured_at",
       ignoreDuplicates: false,
     })
     .select("id");
 
   return requireData("insertSourceMentions", response);
+}
+
+export async function getPublishedTrendingReadModel(supabase) {
+  const response = await supabase
+    .from("read_models")
+    .select("payload, updated_at")
+    .eq("key", "trending:latest")
+    .maybeSingle();
+
+  return requireData("getPublishedTrendingReadModel", response);
 }
 
 export async function publishTrendingReadModel(supabase, payload) {

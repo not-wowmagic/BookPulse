@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Radio, ChevronDown } from "lucide-react";
 import gsap from "gsap";
+import ThemeToggle from "./ThemeToggle";
 
-export default function Navbar() {
+export default function Navbar({ isDarkMode, setIsDarkMode }) {
   const navRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -30,7 +31,7 @@ export default function Navbar() {
       style={{ opacity: 0 }}
     >
       <div
-        className={`flex items-center gap-4 md:gap-8 px-5 md:px-8 py-3 md:py-3.5 border-2 border-black transition-all duration-500 ${
+        className={`flex items-center gap-4 md:gap-6 px-5 md:px-8 py-3 md:py-3.5 border-2 border-black transition-all duration-500 ${
           scrolled
             ? "bg-black/95 backdrop-blur-xl shadow-[4px_4px_0px_#E63B2E]"
             : "bg-offwhite/95 backdrop-blur-xl shadow-[4px_4px_0px_#111111]"
@@ -41,7 +42,7 @@ export default function Navbar() {
         <a
           href="#"
           id="navbar-logo"
-          className="flex items-center gap-2 no-underline"
+          className="flex items-center gap-1 no-underline"
         >
           <span
             className={`text-lg md:text-xl font-bold tracking-tight font-heading ${
@@ -75,6 +76,14 @@ export default function Navbar() {
             LIVE SYNC
           </span>
         </div>
+
+        {/* Divider */}
+        <div
+          className={`w-px h-5 hidden md:block ${scrolled ? "bg-white/20" : "bg-black/15"}`}
+        />
+
+        {/* Theme Toggle */}
+        <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
 
         {/* Divider */}
         <div

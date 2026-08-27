@@ -1,11 +1,16 @@
 import { lazy, Suspense } from "react";
 import Hero from "./components/Hero";
+import Navbar from "./components/Navbar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { useBookData } from "./hooks/useBookData";
 
 /* Lazy-load below-fold sections for faster initial paint */
+const BookOfTheWeek = lazy(() => import("./components/BookOfTheWeek"));
+const ConvergenceDetector = lazy(() => import("./components/ConvergenceDetector"));
 const TrendingBoard = lazy(() => import("./components/TrendingBoard"));
+const Features = lazy(() => import("./components/Features"));
 const DataProtocol = lazy(() => import("./components/DataProtocol"));
+const EmailDigest = lazy(() => import("./components/EmailDigest"));
 const Footer = lazy(() => import("./components/Footer"));
 
 /* Minimal loading skeleton reused by Suspense boundaries */
@@ -23,7 +28,12 @@ function SectionSkeleton() {
 }
 
 export default function App() {
-  const { booktokph, phbookclub, goodreads, lastUpdated, region, setRegion } = useBookData();
+  const {
+    booktokph, phbookclub, goodreads, fullFeed,
+    lastUpdated, status, mode, error,
+    activeVibeFilter, setActiveVibeFilter,
+    isDarkMode, setIsDarkMode,
+  } = useBookData();
 
   return (
     <>
@@ -38,11 +48,28 @@ export default function App() {
         Skip to trending books
       </a>
 
+      {/* Navbar (always visible) */}
+      <Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+
       <main>
         {/* Hero loads eagerly — it's above the fold */}
         <Hero lastUpdated={lastUpdated} />
 
-        {/* Below-fold: lazy loaded + error-resilient */}
+        {/* Book of the Week */}
+        <ErrorBoundary>
+          <Suspense fallback={<SectionSkeleton />}>
+            <BookOfTheWeek fullFeed={fullFeed} />
+          </Suspense>
+        </ErrorBoundary>
+
+        {/* Cross-Platform Convergence */}
+        <ErrorBoundary>
+          <Suspense fallback={<SectionSkeleton />}>
+            <ConvergenceDetector fullFeed={fullFeed} />
+          </Suspense>
+        </ErrorBoundary>
+
+        {/* Trending Board (with filters, sparklines, momentum, etc.) */}
         <ErrorBoundary
           title="Trend data unavailable"
           message="BookPulse couldn't load the live rankings. The data pipeline may need a moment. Try refreshing."
@@ -52,15 +79,33 @@ export default function App() {
               booktokph={booktokph}
               phbookclub={phbookclub}
               goodreads={goodreads}
-              activeRegion={region}
-              setRegion={setRegion}
+              status={status}
+              mode={mode}
+              error={error}
+              activeVibeFilter={activeVibeFilter}
+              setActiveVibeFilter={setActiveVibeFilter}
             />
           </Suspense>
         </ErrorBoundary>
 
+        {/* Features (existing) */}
+        <ErrorBoundary>
+          <Suspense fallback={<SectionSkeleton />}>
+            <Features booktokph={booktokph} phbookclub={phbookclub} goodreads={goodreads} />
+          </Suspense>
+        </ErrorBoundary>
+
+        {/* Data Protocol (existing) */}
         <ErrorBoundary>
           <Suspense fallback={<SectionSkeleton />}>
             <DataProtocol />
+          </Suspense>
+        </ErrorBoundary>
+
+        {/* Email Digest */}
+        <ErrorBoundary>
+          <Suspense fallback={<SectionSkeleton />}>
+            <EmailDigest />
           </Suspense>
         </ErrorBoundary>
       </main>
