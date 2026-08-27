@@ -1,6 +1,7 @@
 import { canonicalBookKey } from "../core/hash.js";
 import { scoreBooks } from "../core/trendScorer.js";
 import { utcNowIso } from "../core/time.js";
+import { createHash } from "node:crypto";
 import { resolveOpenLibraryMetadata } from "./openLibrary.js";
 import { fetchTikTokSource } from "./sourceAdapters/tiktok.js";
 import { fetchRedditSource } from "./sourceAdapters/reddit.js";
@@ -61,11 +62,18 @@ function mergeSourceRecords(successEntries) {
         },
       };
 
-      existing.mentions24h += record.mentions24h;
+      const comparableMentions = record.signalType && record.signalType !== "interval_mention_count"
+        ? 0
+        : Number(record.value ?? record.mentions24h);
+      existing.mentions24h += comparableMentions;
       existing.sources.add(entry.sourceName);
       existing.sourceCount = existing.sources.size;
       existing.metadata.sourceBreakdown[entry.sourceName] =
-        (existing.metadata.sourceBreakdown[entry.sourceName] || 0) + record.mentions24h;
+        (existing.metadata.sourceBreakdown[entry.sourceName] || 0) + comparableMentions;
+      existing.metadata.signalBreakdown ||= {};
+      const signalKey = `${entry.sourceName}:${record.signalType || "interval_mention_count"}`;
+      existing.metadata.signalBreakdown[signalKey] =
+        (existing.metadata.signalBreakdown[signalKey] || 0) + Number(record.value ?? record.mentions24h);
 
       if (new Date(record.capturedAtUtc).getTime() > new Date(existing.lastSeenAtUtc).getTime()) {
         existing.lastSeenAtUtc = record.capturedAtUtc;
@@ -86,14 +94,27 @@ export function buildMentionRows(runId, successEntries) {
   for (const entry of successEntries) {
     for (const record of entry.records) {
       const canonicalKey = canonicalBookKey(record.title, record.author);
-      const observationKey = `${canonicalKey}:${entry.sourceName}:${record.capturedAtUtc}`;
+      const signalType = record.signalType || "interval_mention_count";
+      const signalValue = Number(record.value ?? record.mentions24h);
+      const unit = record.unit || "mentions";
+      const identity = [canonicalKey, entry.sourceName, signalType, record.providerRecordId || "", record.capturedAtUtc].join(":");
+      const observationKey = createHash("sha256").update(identity).digest("hex");
       const existing = rows.get(observationKey);
       rows.set(observationKey, {
         run_id: runId,
         canonical_key: canonicalKey,
         source: entry.sourceName,
-        mentions_24h: (existing?.mentions_24h || 0) + record.mentions24h,
+        mentions_24h: signalType === "interval_mention_count" ? (existing?.mentions_24h || 0) + signalValue : 0,
+        signal_type: signalType,
+        signal_value: (existing?.signal_value || 0) + signalValue,
+        unit,
         captured_at: record.capturedAtUtc,
+        provider_record_id: record.providerRecordId || null,
+        provider_recorded_at: record.providerRecordedAtUtc || null,
+        provider_reference: record.providerReference || record.sourceUrl || null,
+        observation_window: record.window || null,
+        raw_metadata: record.rawMetadata || {},
+        observation_key: observationKey,
       });
     }
   }
@@ -188,6 +209,7 @@ export async function runIngestion({
     });
 
     const successfulSources = successEntries.map((entry) => entry.sourceName);
+    const sourceRecordCounts = Object.fromEntries(successEntries.map((entry) => [entry.sourceName, entry.records.length]));
     const sourceCoverageComplete = requiredSources.every((sourceName) =>
       successfulSources.includes(sourceName)
     );
@@ -254,6 +276,7 @@ export async function runIngestion({
       successfulSources,
       failedSources,
       errorCount: Object.keys(failedSources).length,
+      sourceRecordCounts,
       notes: sourceCoverageComplete
         ? "Read model published from complete source coverage"
         : "Partial run detected. Existing read model was preserved.",
@@ -279,6 +302,7 @@ export async function runIngestion({
         pipeline: summarizeError(error),
       },
       errorCount: 1,
+      sourceRecordCounts: {},
       notes: "Pipeline failed before completion",
     };
 

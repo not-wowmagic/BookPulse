@@ -41,7 +41,7 @@ export default async function ingestCronHandler(req, res) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const supabase = getSupabaseAdminClient(env);
+    const supabase = await getSupabaseAdminClient(env);
     const cache = await createCacheGateway({ env, logger: () => {} });
 
     lockAcquired = await cache.acquireLock("bookpulse:ingest:lock", lockOwner, env.LOCK_TTL_SECONDS);

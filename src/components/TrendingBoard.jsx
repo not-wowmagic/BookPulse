@@ -121,7 +121,7 @@ function BuyLinks({ affiliates }) {
    BookRow — Enhanced with sparkline, momentum, badges
    ═══════════════════════════════════════════════════════ */
 
-const BookRow = memo(function BookRow({ book, rank, config }) {
+const BookRow = memo(function BookRow({ book, rank, config, onSelect }) {
   const [expanded, setExpanded] = useState(false);
   const safeTitle = sanitize(book.title);
   const safeAuthor = sanitize(book.author);
@@ -137,7 +137,9 @@ const BookRow = memo(function BookRow({ book, rank, config }) {
         style={{ padding: "1.5rem 2rem" }}
         role="row"
         aria-label={`Rank ${rank}: ${safeTitle} by ${safeAuthor}, score ${score}`}
-        onClick={() => setExpanded((e) => !e)}
+        tabIndex={0}
+        onClick={() => onSelect(book)}
+        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(book); } }}
       >
         {/* Col 1: Rank */}
         <div className="text-right flex items-center justify-end" role="cell">
@@ -232,7 +234,7 @@ const BookRow = memo(function BookRow({ book, rank, config }) {
               <span className="font-data text-[9px] uppercase tracking-widest">Steady</span>
             </div>
           )}
-          <button className="text-white/20 hover:text-white/50 transition-colors bg-transparent border-none cursor-pointer p-1" aria-label={expanded ? "Collapse details" : "Expand details"}>
+          <button onClick={(event) => { event.stopPropagation(); setExpanded((e) => !e); }} className="text-white/20 hover:text-white/50 transition-colors bg-transparent border-none cursor-pointer p-1" aria-label={expanded ? "Collapse spread and purchase links" : "Expand spread and purchase links"}>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
@@ -251,6 +253,9 @@ const BookRow = memo(function BookRow({ book, rank, config }) {
       <div className="flex md:hidden items-center gap-4 border-b border-white/[0.04] last:border-none"
            style={{ padding: "1.25rem 1.25rem" }}
            role="row"
+           tabIndex={0}
+           onClick={() => onSelect(book)}
+           onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(book); } }}
            aria-label={`Rank ${rank}: ${safeTitle}, score ${score}`}>
         <span className="font-data text-base font-bold text-white/20 tabular-nums w-8 text-right flex-shrink-0" role="cell">
           {String(rank).padStart(2, "0")}
@@ -292,7 +297,7 @@ const BookRow = memo(function BookRow({ book, rank, config }) {
    PlatformBoard — one per data source
    ═══════════════════════════════════════════════════════ */
 
-function PlatformBoard({ platformKey, books }) {
+function PlatformBoard({ platformKey, books, onSelect }) {
   const boardRef = useRef(null);
   const config = PLATFORM_CONFIG[platformKey];
   const { Icon } = config;
@@ -366,7 +371,7 @@ function PlatformBoard({ platformKey, books }) {
       {/* Book Rows */}
       <div role="rowgroup">
         {sortedBooks.map((book, i) => (
-          <BookRow key={book.id} book={book} rank={i + 1} config={config} />
+          <BookRow key={book.id} book={book} rank={i + 1} config={config} onSelect={onSelect} />
         ))}
       </div>
     </div>
@@ -381,6 +386,7 @@ export default function TrendingBoard({
   booktokph, phbookclub, goodreads,
   status, mode, error,
   activeVibeFilter, setActiveVibeFilter,
+  onSelectBook,
 }) {
   const sectionRef = useRef(null);
   const headerRef = useRef(null);
@@ -436,9 +442,9 @@ export default function TrendingBoard({
 
         {/* Platform Boards */}
         <div className="flex flex-col" style={{ gap: "4rem", marginTop: "2.5rem" }}>
-          <PlatformBoard platformKey="booktokph" books={booktokph} />
-          <PlatformBoard platformKey="phbookclub" books={phbookclub} />
-          <PlatformBoard platformKey="goodreads" books={goodreads} />
+          <PlatformBoard platformKey="booktokph" books={booktokph} onSelect={onSelectBook} />
+          <PlatformBoard platformKey="phbookclub" books={phbookclub} onSelect={onSelectBook} />
+          <PlatformBoard platformKey="goodreads" books={goodreads} onSelect={onSelectBook} />
         </div>
 
       </div>

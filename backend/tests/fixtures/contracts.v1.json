@@ -1,0 +1,27 @@
+{
+  "observation": {
+    "canonicalKey": "trese-budjette-tan",
+    "source": "reddit",
+    "signalType": "discussion_count",
+    "value": 12,
+    "unit": "comments",
+    "capturedAtUtc": "2026-08-27T00:15:00.000Z",
+    "providerRecordedAtUtc": "2026-08-26T23:58:00.000Z",
+    "providerRecordId": "t3_example",
+    "providerReference": "https://www.reddit.com/r/PHBookClub/comments/example",
+    "window": null,
+    "rawMetadata": { "subreddit": "PHBookClub" },
+    "ingestionRunId": "00000000-0000-4000-8000-000000000001"
+  },
+  "history": {
+    "canonicalKey": "trese-budjette-tan",
+    "metadata": { "title": "Trese", "author": "Budjette Tan", "coverUrl": null, "publishedYear": null },
+    "current": { "score": 71, "previousScore": 66, "scoreChange": 5, "rank": 3, "previousRank": 5, "rankChange": 2 },
+    "firstSeenAtUtc": "2026-08-26T23:58:00.000Z",
+    "peakScore": 71,
+    "peakRank": 3,
+    "sufficientHistory": false,
+    "series": [{ "source": "reddit", "signalType": "discussion_count", "unit": "comments", "points": [{ "value": 12, "capturedAtUtc": "2026-08-27T00:15:00.000Z", "providerRecordedAtUtc": "2026-08-26T23:58:00.000Z" }] }],
+    "sourceFreshness": [{ "source": "reddit", "latestCapturedAtUtc": "2026-08-27T00:15:00.000Z" }]
+  }
+}
